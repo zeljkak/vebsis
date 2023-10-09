@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Title</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script>
+        $(function () {
+            let regis = 'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/register';
+            let prij = 'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/login';
+            let apitoken = 'a4sOI32Aiul0G4hgCYdL7RI4uCYp9RzaS4tFbeAodsjtoo29QnWTtrkcKK7Y1jDX47VD4qzHBjI9J2o12YWYoqAtrp';
+
+            function proveraIme(element) {
+                //const cirilica = /^[\u0400-\u04FF]+$/;
+                let testIme =/^[A-ZŠĐČĆŽ][a-zšđčćž]{1,15}([ \-][A-ZŠĐČĆŽ][a-zšđčćž]{1,15})?[ \-][A-ZŠĐČĆŽ][a-zšđčćž]{1,20}([ \-][A-ZŠĐČĆŽ][a-zšđčćž]{1,20})?[ \-][A-ZŠĐČĆŽ][a-zšđčćž]{1,20}?$/.test(element.val());
+                if (testIme === false) {
+                    element.css('outline', 'solid orange 3px');
+                }
+                else {
+                    element.css('outline', 'none');
+                }
+            }
+            function proveraTelefon(element) {
+                let testTelefon =/^[+]?[1-9][0-9]{8,13}$/.test(element.val());
+                if (testTelefon === true || !(element.val())) {
+                    element.css('outline', 'none');
+
+                } else {
+                    element.css('outline', 'solid orange 3px');
+                }
+            }
+            function proveraEmail(element) {
+                let testEmail = /^[a-zA-Z][a-zA-Z0-9_\-.]{1,40}[@][a-zA-Z0-9][a-zA-Z0-9_\-.]{1,40}$/.test(element.val());
+                if (testEmail === false) {
+                    element.css('outline', 'solid orange 3px');
+                } else {
+                    element.css('outline', 'none');
+                }
+            }
+            function proveraLozinka1(element) {
+                let testLoz1 =/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@.$# !%*?&])[A-Za-z\d@.$# !%*?&]{6,}$/.test(element.val());
+                if (testLoz1 === true) {
+                    element.css('outline', 'none');
+                } else {
+                    element.css('outline', 'solid orange 3px');
+                }
+            }
+            function proveraLozinka2(elem1, elem2) {
+                if (elem1.val() === elem2.val()) {
+                    elem1.css('outline', 'none');
+                } else {
+                    elem1.css('outline', 'solid orange 3px');
+                }
+            }
+
+
+            let nasl = '<div id="naslovna" class="izgled">\n' +
+                '        <a href="#">Registracija</a><br>\n' +
+                '        <a href="#" id="prijavaKlik">Prijava</a><br>\n' +
+                '        <a href="#">Lista svih aktuelnih dogadjaja</a><br>\n' +
+                '        <a href="#">Pretraga dogadjaja</a>\n' +
+                '    </div>';
+            $('body').append(nasl);
+
+
+            let forma2 = '<div id="prijava" class="izgled"><form id="prijavaF" class="izgled" method="POST"><label for="emailPrijava">E-mail:</label><br><input type="text" id="emailPrijava" class="email" required><br><label for="lozinkaPrijava">Lozinka:</label><br><input type="password" id="lozinkaPrijava" required><br><br><button type="submit" id="dugmePrij">Prijavi se</button></form></div>';
+
+            let sviK = '<div id="listaSvih" class="izgled"><br><h1>Svi korisnici</h1><br><table id="sviTabela"><thead><th>ID</th><th>Ime i prezime</th><th>E-mail</th><th>Telefon</th><th>Lokacija</th><th>Uloga</th></thead></table></div>';
+
+
+            $('a:nth-of-type(2)').on('click', function (e) {
+                $('#naslovna').hide();
+                $('body').append(forma2);
+                $('#emailPrijava').on('blur', function (e){
+                    proveraEmail($(this));
+                });
+                $('#prijavaF').on('submit', function (e) {
+                    e.preventDefault();
+                    let email1 = $('#emailPrijava').val();
+                    let password1 = $('#lozinkaPrijava').val();
+
+
+                    $.ajax({
+                        'url':prij,
+                        'method':'post',
+                        'data': {
+                            'email': email1,
+                            'password': password1,
+                            'apitoken': apitoken
+                        },
+                        'dataType':'json',
+                        'success':function (response) {
+                            if (document.getElementById('prijavaF').contains(document.getElementById('greska'))) {
+                                document.getElementById('prijavaF').removeChild(document.getElementById('greska'));
+                            }
+                            let token = response.token;
+                            let tipKorisnika = response.type;
+                            localStorage.setItem('token', token);
+
+                            if (tipKorisnika === "администратор") {
+                                $('#prijava').remove();
+
+                                let adm = '<div id="admin" class="izgled"><a href="#" id="opcijaUloge">Lista svih uloga</a><br><a href="#" id="opcijaKorisnici">Lista svih korisnika</a><br><a href="#" id="listaLokacija">Lista svih lokacija</a><br><a href="#">Lista svih dogadjaja</a><br><a href="#">Lista svih rezervacija</a><br><a href="#" id="kreiranje">Kreiranje korisnika</a></div>';
+                                $('body').append(adm);
+
+
+                                // POST Креирање корисника
+
+                                let formaKreiranjeKorisnika = "<div id='kor' class='izgled'><br><form id='korisnikF' class='izgled' method='POST'>" +
+                                    "    <h1>Korisnik</h1><br>" +
+                                    "    <label for='imePrezimeKorisnik'>Ime i prezime:</label><br>" +
+                                    "    <input type='text' id='imePrezimeKorisnik' name='imePrezime' required maxlength='180'><br>" +
+                                    "    <label for='emailKorisnik'>Email:</label><br>" +
+                                    "    <input type='email' id='emailKorisnik' name='email' required><br>" +
+                                    "    <label for='lozinka1Korisnik'>Lozinka:</label><br>" +
+                                    "    <input type='password' id='lozinka1Korisnik' name='lozinka1' required><br>" +
+                                    "    <label for='lozinka2Korisnik'>Ponoviti lozinku:</label><br>" +
+                                    "    <input type='password' id='lozinka2Korisnik' name='lozinka2' required><br>" +
+                                    "    <label for='telefonKorisnik'>Telefon:</label><br>" +
+                                    "    <input type='number' id='telefonKorisnik' name='telefon'><br>" +
+                                    "    <label for='uloga'>Uloga:</label><br>" +
+                                    "    <select id='uloga' name='uloga'><br>" +
+                                    "      <option value=''>Izabrati ulogu</option><br>" +
+                                    "      <option value='2' id='poljeBlagajnik'>Blagajnik</option><br>" +
+                                    "      <option value='3'>Registrovani korisnik</option><br>" +
+                                    "      <option value='1'>Administrator</option><br>" +
+                                    "    </select><br><br id='zaBrisanje'>" +
+                                    "    <button type='submit'>Sacuvaj</button></form></div>";
+
+                                $('#kreiranje').on('click', function(e) {
+                                    e.preventDefault();
+                                    $('#uloge1').remove();
+                                    $('#admini').remove();
+                                    $('#blagajnici1').remove();
+                                    $('#registr').remove();
+                                    $('#blokir').remove();
+                                    $('#kor').remove();
+                                    $('#listaSvih').remove();
+                                    $('#lokacije').remove();
+
+
+
+                                    $('body').append(formaKreiranjeKorisnika);
+                                    $('#uloga').on('change', function () {
+                                        e.preventDefault();
+                                        let izabranaVrednost = $(this).val();
+                                        if (izabranaVrednost === '2') {
+                                            let lokacija = "<div id='poljeLokacija' class='izgled'>" +
+                                                "      <label for='lokacija'>Lokacija:</label><br>" +
+                                                "      <select id='lokacija' name='lokacija'><br>" +
+                                                "        <option value='1'>Lokacija 1</option><br>" +
+                                                "        <option value='2'>Lokacija 2</option><br>" +
+                                                "        <option value='3'>Lokacija 3</option><br>" +
+                                                "      </select></div><br>";
+                                            let brisanje = document.getElementById('zaBrisanje');
+                                            brisanje.remove();
+                                            $('#korisnikF button[type="submit"]').before(lokacija);
+                                        } else {
+                                            $('#poljeLokacija').remove();
+                                        }
+                                    });
+
+
+                                    $('#imePrezimeKorisnik').on('blur', function (e) {
+                                        proveraIme($(this));
+                                    });
+                                    $('#imePrezimeKorisnik').on('focus', function (e) {
+                                        $(this).css('outline', 'none');
+                                    });
+                                    $('#emailKorisnik').on('blur', function (e) {
+                                        proveraEmail($(this));
+                                    });
+                                    $('#emailKorisnik').on('focus', function (e) {
+                                        $(this).css('outline', 'none');
+                                    });
+                                    $('#telefonKorisnik').on('blur', function (e) {
+                                        proveraTelefon($(this));
+                                    });
+                                    $('#telefonKorisnik').on('focus', function (e) {
+                                        $(this).css('outline', 'none');
+                                    });
+                                    $('#lozinka1Korisnik').on('blur', function (e) {
+                                        proveraLozinka1($(this));
+                                    });
+                                    $('#lozinka1Korisnik').on('focus', function (e) {
+                                        $(this).css('outline', 'none');
+                                    });
+                                    $('#lozinka2Korisnik').on('blur', function (e) {
+                                        proveraLozinka2($(this), $('#lozinka1Korisnik'));
+                                    });
+                                    $('#lozinka2Korisnik').on('focus', function (e) {
+                                        $(this).css('outline', 'none');
+                                    });
+
+
+                                    $('#korisnikF').on('submit', function (e) {
+                                        e.preventDefault();
+                                        let name = $('#imePrezimeKorisnik').val();
+                                        let email = $('#emailKorisnik').val();
+                                        let phone = '+' + $('#telefonKorisnik').val();
+                                        let password = $('#lozinka1Korisnik').val();
+                                        let userRoleId = $('#uloga').val();
+                                        let locationId = $('#lokacija').val();
+                                        if (userRoleId === '2') {
+                                            $.ajax({
+                                                'url': 'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/korisnik',
+                                                'method': 'post',
+                                                'data': {
+                                                    'name': name,
+                                                    'email': email,
+                                                    'phone': phone,
+                                                    'password': password,
+                                                    'userRoleId': userRoleId,
+                                                    'locationId': locationId,
+                                                    'apitoken': apitoken
+                                                },
+                                                'headers': {
+                                                    'Authorization': "Bearer " + token
+                                                },
+                                                'dataType': 'json',
+                                                'success': function (response) {
+                                                    $('#kor').remove();
+                                                    $.ajax({
+                                                        'url': 'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/korisnik?apitoken=qAvhkDxDbnYZRoh8pMLEe6QiTIEUZG2WONzVPcxyiQeJuCMyJpCpjEvxOm6Iq6gVa5jGGXbXLJmsuH85q2teOLhQCY',
+                                                        'method': 'get',
+                                                        'data': {
+                                                            'apitoken': apitoken
+                                                        },
+                                                        'headers': {
+                                                            'Authorization': "Bearer " + token
+                                                        },
+                                                        'dataType': 'json',
+                                                        'success': function (response1) {
+                                                            $('body').append(sviK);
+                                                            for (let i = 0; i < response1.length; i++) {
+                                                                $('#sviTabela').append('<tbody><tr><th>' + response1[i].id + '</th><th>' + response1[i].imePrezime + '</th><th>' + response1[i].email + '</th><th>' + response1[i].telefon + '</th><th>' + response1[i].lokacija + '</th><th>' + response1[i].uloga.naziv + '</th></tr></tbody>');
+                                                            }
+                                                        },
+                                                        'error': function (res1) {
+                                                            console.log('err: ', res1);
+
+                                                        }
+                                                    });
+
+                                                },
+                                                'error': function (resp) {
+                                                    console.log('Error: ' + resp);
+                                                }
+                                            });
+                                        }
+                                        else if(userRoleId === '3' || userRoleId === '1') {
+                                            $.ajax({
+                                                'url': 'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/korisnik',
+                                                'method': 'post',
+                                                'data': {
+                                                    'name': name,
+                                                    'email': email,
+                                                    'phone': phone,
+                                                    'password': password,
+                                                    'userRoleId': userRoleId,
+                                                    'apitoken': apitoken
+                                                },
+                                                'headers': {
+                                                    'Authorization': "Bearer " + token
+                                                },
+                                                'dataType': 'json',
+                                                'success': function (response) {
+                                                    $('#kor').remove();
+                                                    $.ajax({
+                                                        'url': 'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/korisnik?apitoken=qAvhkDxDbnYZRoh8pMLEe6QiTIEUZG2WONzVPcxyiQeJuCMyJpCpjEvxOm6Iq6gVa5jGGXbXLJmsuH85q2teOLhQCY',
+                                                        'method': 'get',
+                                                        'data': {
+                                                            'apitoken': apitoken
+                                                        },
+                                                        'headers': {
+                                                            'Authorization': "Bearer " + token
+                                                        },
+                                                        'dataType': 'json',
+                                                        'success': function (response1) {
+                                                            $('body').append(sviK);
+                                                            for (let i = 0; i < response1.length; i++) {
+                                                                $('#sviTabela').append('<tbody><tr><th>' + response1[i].id + '</th><th>' + response1[i].imePrezime + '</th><th>' + response1[i].email + '</th><th>' + response1[i].telefon + '</th><th>' + response1[i].lokacija + '</th><th>' + response1[i].uloga.naziv + '</th></tr></tbody>');
+                                                            }
+                                                        },
+                                                        'error': function (res1) {
+                                                            console.log('err: ', res1);
+                                                        }
+                                                    });
+
+                                                },
+                                                'error': function (resp) {
+                                                    console.log('Error: ' + resp);
+                                                }
+                                            });
+                                        }
+                                    });
+                                });
+
+
+                                // GET Листа свих улога корисника
+
+                                $('#opcijaUloge').on('click', function (e) {
+
+                                    let uloge = "<div id='uloge1' class='izgled'><br><h1>Uloge korisnika</h1><br><table id='ulogeT'><thead><tr><th>ID</th><th>Naziv</th><th>Opis</th><th>Broj korisnika</th></tr></thead></table></div>";
+
+                                    $('#uloge1').remove();
+                                    $('#admini').remove();
+                                    $('#blagajnici1').remove();
+                                    $('#registr').remove();
+                                    $('#blokir').remove();
+                                    $('#kor').remove();
+                                    $('#listaSvih').remove();
+                                    $('#lokacije').remove();
+
+
+                                    $('body').append(uloge);
+
+                                    $.ajax({
+                                        'url': 'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/uloga?apitoken=qAvhkDxDbnYZRoh8pMLEe6QiTIEUZG2WONzVPcxyiQeJuCMyJpCpjEvxOm6Iq6gVa5jGGXbXLJmsuH85q2teOLhQCY',
+                                        'method': 'get',
+                                        'data': {
+                                            'apitoken': apitoken
+                                        },
+                                        'headers': {
+                                            'Authorization': "Bearer " + token
+                                        },
+                                        'dataType': 'json',
+                                        'success': function (response) {
+                                            $.ajax({
+                                                'url':'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/korisnik?apitoken=qAvhkDxDbnYZRoh8pMLEe6QiTIEUZG2WONzVPcxyiQeJuCMyJpCpjEvxOm6Iq6gVa5jGGXbXLJmsuH85q2teOLhQCY',
+                                                'method':'get',
+                                                'data':{
+                                                    'apitoken':apitoken
+                                                },
+                                                'headers': {
+                                                    'Authorization': "Bearer " + token
+                                                },
+                                                'dataType':'json',
+                                                'success': function (res) {
+                                                    let brAdm = 0;
+                                                    let brBla = 0;
+                                                    let brReg = 0;
+                                                    let brBlok = 0;
+                                                    for(let i = 0; i < res.length; i++) {
+                                                        if (res[i].uloga.naziv === 'администратор') {
+                                                            brAdm++;
+                                                        } else if(res[i].uloga.naziv === 'благајник') {
+                                                            brBla++;
+                                                        } else if(res[i].uloga.naziv === 'регистровани корисник') {
+                                                            brReg++;
+                                                        } else if(res[i].uloga.naziv === 'блокирани корисник') {
+                                                            brBlok++;
+                                                        }
+                                                    }
+                                                    let niz = [brAdm, brBla, brReg, brBlok];
+                                                    for (let i = 0; i < response.length; i++) {
+                                                            $('#ulogeT').append('<tbody><tr><th>' + response[i].id + '</th><th>' + response[i].naziv + '</th><th>' + response[i].opis + '</th><th>' + niz[i] + '</th></tr></tbody>');
+                                                    }
+                                                    let prvi = document.querySelector("table tbody:nth-of-type(1) tr th:last-of-type");
+                                                    prvi.setAttribute('id', 'korAdm');
+                                                    let drugi = document.querySelector("table tbody:nth-of-type(2) tr th:last-of-type");
+                                                    drugi.setAttribute('id', 'korBla');
+                                                    let treci = document.querySelector("table tbody:nth-of-type(3) tr th:last-of-type");
+                                                    treci.setAttribute('id', 'korReg');
+                                                    let cetvrti = document.querySelector("table tbody:nth-of-type(4) tr th:last-of-type");
+                                                    cetvrti.setAttribute('id', 'korBlok');
+                                                    $('#korAdm').on('click', function (e){
+                                                        $('#admini').remove();
+                                                        $('body').append('<div id="admini" class=\'izgled\'><br><h2>Administratori</h2><br><table id="admTabela"><thead><th>ID</th><th>Ime i prezime</th><th>E-mail</th><th>Telefon</th></thead></table></div>');
+                                                        for(let i = 0; i < res.length; i++) {
+                                                            if (res[i].uloga.naziv === 'администратор') {
+                                                                $('#admTabela').append('<tbody><tr><th>' + res[i].id + '</th><th>' + res[i].imePrezime + '</th><th>' + res[i].email + '</th><th>' + res[i].telefon + '</th></tr></tbody>');
+                                                            }
+                                                        }
+                                                    });
+                                                    $('#korBla').on('click', function (e){
+                                                        $('#blagajnici1').remove();
+                                                        $('body').append('<div id="blagajnici1" class=\'izgled\'><br><h2>Blagajnici</h2><br><table id="blagTabela"><thead><th>ID</th><th>Ime i prezime</th><th>E-mail</th><th>Telefon</th></thead></table></div>');
+                                                        for(let i = 0; i < res.length; i++) {
+                                                            if (res[i].uloga.naziv === 'благајник') {
+                                                                $('#blagTabela').append('<tbody><tr><th>' + res[i].id + '</th><th>' + res[i].imePrezime + '</th><th>' + res[i].email + '</th><th>' + res[i].telefon + '</th></tr></tbody>');
+                                                            }
+                                                        }
+                                                    });
+                                                    $('#korReg').on('click', function (e){
+                                                        $('#registr').remove();
+                                                        $('body').append('<div id="registr" class=\'izgled\'><br><h2>Registrovani korisnici</h2><br><table id="regTabela"><thead><th>ID</th><th>Ime i prezime</th><th>E-mail</th><th>Telefon</th></thead></table></div>');
+                                                        for(let i = 0; i < res.length; i++) {
+                                                            if (res[i].uloga.naziv === 'регистровани корисник') {
+                                                                $('#regTabela').append('<tbody><tr><th>' + res[i].id + '</th><th>' + res[i].imePrezime + '</th><th>' + res[i].email + '</th><th>' + res[i].telefon + '</th></tr></tbody>');
+                                                            }
+                                                        }
+                                                    });
+                                                    $('#korBlok').on('click', function (e){
+                                                        $('#blokir').remove();
+                                                        $('body').append('<div id="blokir" class=\'izgled\'><br><h2>Blokirani korisnici</h2><br><table id="blokTabela"><thead><th>ID</th><th>Ime i prezime</th><th>E-mail</th><th>Telefon</th></thead></table></div>');
+                                                        for(let i = 0; i < res.length; i++) {
+                                                            if (res[i].uloga.naziv === 'блокирани корисник') {
+                                                                $('#blokTabela').append('<tbody><tr><th>' + res[i].id + '</th><th>' + res[i].imePrezime + '</th><th>' + res[i].email + '</th><th>' + res[i].telefon + '</th></tr></tbody>');
+                                                            }
+                                                        }
+                                                    });
+                                                },
+                                                'error': function (r) {
+                                                    console.log('ERR: ', r);
+                                                }
+                                            });
+                                        },
+                                        'error': function (resp) {
+                                            console.log(resp);
+                                        }
+                                    });
+                                });
+
+
+                                // GET Листа свих korisnika
+
+                                $('#opcijaKorisnici').on('click', function (e) {
+                                    e.preventDefault();
+
+
+                                    $('#uloge1').remove();
+                                    $('#admini').remove();
+                                    $('#blagajnici1').remove();
+                                    $('#registr').remove();
+                                    $('#blokir').remove();
+                                    $('#kor').remove();
+                                    $('#listaSvih').remove();
+                                    $('#lokacije').remove();
+
+
+                                    $.ajax({
+                                        'url':'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/korisnik?apitoken=qAvhkDxDbnYZRoh8pMLEe6QiTIEUZG2WONzVPcxyiQeJuCMyJpCpjEvxOm6Iq6gVa5jGGXbXLJmsuH85q2teOLhQCY',
+                                        'method':'get',
+                                        'data':{
+                                            'apitoken':apitoken
+                                        },
+                                        'headers': {
+                                            'Authorization': "Bearer " + token
+                                        },
+                                        'dataType':'json',
+                                        'success': function (response1) {
+                                            $('body').append(sviK);
+                                            for (let i = 0; i < response1.length; i++) {
+                                                let lok = '/';
+                                                if(response1[i].uloga.naziv === 'благајник') {
+                                                    lok = response1[i].lokacija.naziv;
+                                                }
+                                                $('#sviTabela').append('<tbody><tr><th>' + response1[i].id + '</th><th>' + response1[i].imePrezime + '</th><th>' + response1[i].email + '</th><th>' + response1[i].telefon + '</th><th>' + lok + '</th><th>' + response1[i].uloga.naziv + '</th></tr></tbody>');
+
+                                            }
+                                        },
+                                        'error':function (res1) {
+                                            console.log('err: ', res1);
+
+                                        }
+                                    });
+                                });
+
+                                // GET Листа свих локација
+
+                                $('#listaLokacija').on('click', function (e) {
+
+                                    e.preventDefault();
+                                    $('#uloge1').remove();
+                                    $('#admini').remove();
+                                    $('#blagajnici1').remove();
+                                    $('#registr').remove();
+                                    $('#blokir').remove();
+                                    $('#kor').remove();
+                                    $('#listaSvih').remove();
+                                    $('#lokacije').remove();
+
+                                    $.ajax({
+                                        'url':'https://vsis.mef.edu.rs/projekat/ulaznice/public_html/api/lokacija?apitoken=qAvhkDxDbnYZRoh8pMLEe6QiTIEUZG2WONzVPcxyiQeJuCMyJpCpjEvxOm6Iq6gVa5jGGXbXLJmsuH85q2teOLhQCY',
+                                        'method':'get',
+                                        'data':{
+                                            'apitoken':apitoken
+                                        },
+                                        'headers': {
+                                            'Authorization': "Bearer " + token
+                                        },
+                                        'dataType':'json',
+                                        'success': function (response1) {
+                                            $('body').append('<div id="lokacije" class=\'izgled\'><br><h1>Sve lokacije</h1><br><table id="lokacijeTabela"><thead><th>ID</th><th>Naziv lokacije</th><th>Grad</th><th>Adresa</th><th>Opis</th><th>Radno vreme</th><th>Ukupno blagajnika</th><th>Ukupno dogadjaja</th></thead></table></div>');
+
+                                            let dan;
+                                            for (let i = 0; i < response1.length; i++) {
+                                                $('#lokacijeTabela').append('<tbody><tr><th>' + response1[i].id + '</th><th>' + response1[i].naziv + '</th><th>' + response1[i].grad + '</th><th>' + response1[i].adresa + '</th><th>' + response1[i].opis + '</th><th>' + dan + '</th><th>' + response1[i].blagajnici.length + '</th><th>' + response1[i].dogadjaji.length + '</th></tr></tbody>');
+                                            }
+
+                                        },
+                                        'error':function (res1) {
+                                            console.log('err: ', res1);
+
+                                        }
+                                    });
+                                });
+
+                            }
+
+                        },
+                        'error':function (res) {
+                            console.log('ERROR: ' + res);
+                            document.getElementById('lozinkaPrijava').value = '';
+                            let p = document.createElement("p");
+                            p.setAttribute("id", "greska");
+                            document.getElementById('prijavaF').append(p);
+                            p.innerHTML = "Погрешно корисничко име / лозинка!";
+                        }
+                    });
+                });
+            });
+
+            $('a:first-of-type').on('click', function (e){
+                let forma1 = '<div id="regist" class="izgled"><form id="registracijaF" class=\'izgled\' method="POST"><label for="imePrezime">Ime i prezime:</label><br><input type="text" name="imePrezime" id="imePrezime" placeholder="Unesite ime i prezime" required><br>' +
+                    '<label for="telefon">Telefon:</label><br><input type="number" name="telefon" id="telefon" placeholder="Unesite telefon"><br>' +
+                    '<label for="email">Email:</label><br><input type="email" name="email" id="email" placeholder="Unesite email" required><br>' +
+                    '<label for="lozinka1">Lozinka:</label><br><input type="password" name="lozinka1" id="lozinka1" placeholder="Unesite lozinku" required><br>' +
+                    '<label for="lozinka2">Ponovljena lozinka:</label><br><input type="password" name="lozinka2" id="lozinka2" placeholder="Ponovo unesite lozinku" required><br><br>' +
+                    '<button type="submit" id="dugmeReg">Registruj se</button></form></div>';
+                $('#naslovna').hide();
+                $('body').append(forma1);
+
+                $('#imePrezime').on('focus', function (e){
+                    $(this).css('outline', 'none');
+                });
+                $('#imePrezime').on('blur', function (e){
+                    proveraIme($(this));
+                });
+                $('#email').on('focus', function (e){
+                    $(this).css('outline', 'none');
+                });
+                $('#email').on('blur', function (e){
+                    proveraEmail($(this));
+                });
+                $('#telefon').on('focus', function (e){
+                    $(this).css('outline', 'none');
+                });
+                $('#telefon').on('blur', function (e){
+                    proveraTelefon($(this));
+                });
+                $('#lozinka1').on('blur', function (e){
+                    proveraLozinka1($(this));
+                });
+                $('#lozinka2').on('blur', function (e){
+                    proveraLozinka2($(this), $('#lozinka1'));
+                });
+
+                $('#registracijaF').on('submit', function (e) {
+                    e.preventDefault();
+                    let name = $('#imePrezime').val();
+                    let email = $('#email').val();
+                    let phone = '+'+ $('#telefon').val();
+                    let password = $('#lozinka1').val();
+
+
+                    $.ajax({
+                        'url':regis,
+                        'method':'post',
+                        'data': {
+                            'name': name,
+                            'email': email,
+                            'phone': phone,
+                            'password': password,
+                            'apitoken': apitoken
+                        },
+                        'dataType':'json',
+                        'success':function (response) {
+                            if (response.error === "Корисник са том мејл адресом већ постоји!") {
+                                document.getElementById('email').value = '';
+                                let p = document.createElement("p");
+                                document.getElementById('registracijaF').append(p);
+                                p.innerHTML = response.error;
+                            } else {
+                                $('#regist').remove();
+                                $('#prijavaKlik').click();
+                            }
+                        },
+                        'error':function (res) {
+                            console.log('ERROR: ' + res);
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+    <style>
+        * {
+            font-family: Arial;
+        }
+        body{
+            margin:0;
+            padding:10px;
+            position: relative;
+        }
+        button {
+            background-color: #aaa;
+            border: solid 2px black;
+            color: black;
+            font-weight: bold;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .izgled {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        table {
+            width: 95%;
+            overflow: scroll;
+            overflow-y: hidden;
+        }
+        a {
+            text-decoration: none;
+            color: black;
+        }
+        form {
+            background-color: #eee;
+            border: solid 5px #aaa;
+            max-width: 500px;
+            padding: 20px;
+        }
+        p {
+            color: orange;
+        }
+        tbody > tr > th {
+            font-weight: normal;
+        }
+        tbody > tr > th {
+            font-weight: normal;
+        }
+        thead {
+            background-color: #eee;
+        }
+        table, th, tr {
+            border: 1px solid #aaa;
+            border-collapse: collapse;
+        }
+    </style>
+</head>
+<body>
+</body>
+</html>
